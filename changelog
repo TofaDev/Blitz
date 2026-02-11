@@ -1,3 +1,23 @@
+# 🔖 ** release(2.5.2): API Server module, fork links update & docs refresh 🚀 **
+
+*Released: 2026-02-11*
+
+## ✨ New Features
+
+* 🔌 **API Server**: New HTTPS module exposing `cli_api` methods with token auth
+* 🔐 **Caddy Routing**: API Server integrated with existing Caddy reverse proxy and root-path routing
+* 🧰 **CLI/Menu**: Added CLI and menu controls for API Server management
+
+### 🧩 Integrations
+
+* 📊 **Service Status**: API Server added to status endpoints and services status checks
+* 🧼 **Uninstall/Upgrade**: API Server service included in uninstall and upgrade workflows
+
+### 📝 Documentation
+
+* 📚 Updated README files with API Server usage and endpoints
+* 🔗 Updated repo links to fork across installers, UI, and docs
+
 # 🔖 ** release(2.5.1): Telegram UX improvements, web panel access & outbound enhancements 🚀 **
 
 *Released: 2026-01-02*
