@@ -1,9 +1,9 @@
 <div align="center">
 
 [![Telegram](https://img.shields.io/badge/Telegram-Join%20Chat-26A5E4?logo=telegram&logoColor=white)](https://t.me/hysteria2_panel)
-[![Docs](https://img.shields.io/badge/Docs-Read%20Now-FFA500?logo=bookstack&logoColor=white)](https://returnfi.github.io/Blitz-docs/)
+[![Docs](https://img.shields.io/badge/Docs-Read%20Now-FFA500?logo=bookstack&logoColor=white)](https://tofadev.github.io/Blitz-docs/)
 [![Language](https://img.shields.io/badge/Language-Persian-009688?logo=google-translate&logoColor=white)](README-fa.md)
-[![Latest Release](https://img.shields.io/badge/Release-Latest-brightgreen?logo=github)](https://github.com/ReturnFI/Blitz/releases)
+[![Latest Release](https://img.shields.io/badge/Release-Latest-brightgreen?logo=github)](https://github.com/TofaDev/Blitz/releases)
 [![License](https://img.shields.io/badge/License-GPL-blueviolet?logo=open-source-initiative&logoColor=white)](LICENSE)
 [![Made with ❤️](https://img.shields.io/badge/Made%20with-%E2%9D%A4-red)](#)
 
@@ -21,18 +21,33 @@
 
 
 
-A powerful and user-friendly management panel for Hysteria2 proxy server. Features include complete user management, traffic monitoring, WARP integration, Telegram bot support, and multiple subscription formats. Simple installation with advanced configuration options for both beginners and experienced users.
+A powerful and user-friendly management panel for Hysteria2 proxy server. Features include complete user management, traffic monitoring, WARP integration, Telegram bot support, an API Server module, and multiple subscription formats. Simple installation with advanced configuration options for both beginners and experienced users.
 
 
 ## 📋 Quick Start Guide
 
 ### One-Click Installation
 ```bash
-bash <(curl https://raw.githubusercontent.com/ReturnFI/Blitz/main/install.sh)
+bash <(curl https://raw.githubusercontent.com/TofaDev/Blitz/main/install.sh)
 ```
 After installation, use `hys2` to launch the management panel.
 
 There is no need to execute the installation command again.
+
+## 🔌 API Server Module
+
+Expose all available `cli_api.py` methods over HTTPS with token authentication. This module runs as a separate service and is accessible via a dedicated root path.
+
+Start the API Server:
+```bash
+python3 cli.py apiserver --action start --domain api.example.com --port 8443
+```
+
+Show URL and API token:
+```bash
+python3 cli.py get-apiserver-url
+python3 cli.py get-apiserver-api-token
+```
 
 
 

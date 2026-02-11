@@ -690,6 +690,53 @@ def get_web_panel_api_token():
     except Exception as e:
         click.echo(f'{e}', err=True)
 
+@cli.command('apiserver')
+@click.option('--action', '-a', required=True, type=click.Choice(['start', 'stop']), help='Action to perform')
+@click.option('--domain', '-d', required=False, help='Domain for API Server', type=str)
+@click.option('--port', '-p', required=False, help='Port number for API Server', type=int)
+@click.option('--token', '-t', required=False, help='API token for API Server (optional)', type=str)
+@click.option('--root-path', '-r', required=False, help='Root path for API Server (optional)', type=str)
+@click.option('--debug', '-g', is_flag=True, help='Enable debug mode for API Server', default=False)
+def apiserver(action: str, domain: str, port: int, token: str | None, root_path: str | None, debug: bool):
+    """Manage the API Server service."""
+    try:
+        if action == 'start':
+            if not domain or not port:
+                raise click.UsageError('Error: --domain and --port are required for start action.')
+            cli_api.start_apiserver(domain, port, token, root_path, debug)
+            click.echo('API Server started successfully.')
+            url = cli_api.get_apiserver_url()
+            if url:
+                click.echo(f'API Server URL: {url}')
+            api_token = cli_api.get_apiserver_api_token()
+            if api_token:
+                click.echo(f'API Server token: {api_token}')
+        elif action == 'stop':
+            cli_api.stop_apiserver()
+            click.echo('API Server stopped successfully.')
+    except Exception as e:
+        click.echo(f'{e}', err=True)
+
+@cli.command('get-apiserver-url')
+@click.option('--url-only', is_flag=True, help='Only display the URL without additional text')
+def get_apiserver_url(url_only: bool):
+    try:
+        url = cli_api.get_apiserver_url()
+        if url_only:
+            click.echo(url)
+        else:
+            click.echo(f'API Server is now running. The service is accessible on: {url}')
+    except Exception as e:
+        click.echo(f'{e}', err=True)
+
+@cli.command('get-apiserver-api-token')
+def get_apiserver_api_token():
+    try:
+        token = cli_api.get_apiserver_api_token()
+        click.echo(f'API Server token: {token}')
+    except Exception as e:
+        click.echo(f'{e}', err=True)
+
 @cli.command('reset-webpanel-creds')
 @click.option('--new-username', '-u', required=False, help='New admin username for WebPanel', type=str)
 @click.option('--new-password', '-p', required=False, help='New admin password for WebPanel', type=str)

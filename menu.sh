@@ -416,7 +416,7 @@ edit_ips() {
 }
 
 hysteria_upgrade(){
-    bash <(curl https://raw.githubusercontent.com/ReturnFI/Blitz/main/upgrade.sh)
+    bash <(curl https://raw.githubusercontent.com/TofaDev/Blitz/main/upgrade.sh)
 }
 
 warp_configure_handler() {
@@ -878,6 +878,80 @@ webpanel_handler() {
     done
 }
 
+apiserver_handler() {
+    echo -e "${cyan}API Server Service Status:${NC}"
+    if systemctl is-active --quiet hysteria-apiserver.service; then
+        echo "hysteria-apiserver.service: Active"
+    else
+        echo "hysteria-apiserver.service: Inactive"
+    fi
+    echo ""
+
+    while true; do
+        echo -e "${cyan}1.${NC} Start API Server"
+        echo -e "${red}2.${NC} Stop API Server"
+        echo -e "${cyan}3.${NC} Get API Server URL"
+        echo -e "${cyan}4.${NC} Show API Token"
+        echo "0. Back"
+        read -p "Choose an option: " option
+
+        case $option in
+            1)
+                if systemctl is-active --quiet hysteria-apiserver.service; then
+                    echo "The hysteria-apiserver.service is already active."
+                else
+                    while true; do
+                        read -e -p "Enter the domain name for the SSL certificate: " domain
+                        if [ -z "$domain" ]; then
+                            echo "Domain name cannot be empty. Please try again."
+                        else
+                            break
+                        fi
+                    done
+
+                    while true; do
+                        read -e -p "Enter the port number for the service: " port
+                        if [ -z "$port" ]; then
+                            echo "Port number cannot be empty. Please try again."
+                        elif ! [[ "$port" =~ ^[0-9]+$ ]]; then
+                            echo "Port must be a number. Please try again."
+                        else
+                            break
+                        fi
+                    done
+
+                    python3 $CLI_PATH apiserver -a start -d "$domain" -p "$port"
+                fi
+                ;;
+            2)
+                if ! systemctl is-active --quiet hysteria-apiserver.service; then
+                    echo "The hysteria-apiserver.service is already inactive."
+                else
+                    python3 $CLI_PATH apiserver -a stop
+                fi
+                ;;
+            3)
+                url=$(python3 $CLI_PATH get-apiserver-url)
+                echo "-------------------------------"
+                echo "$url"
+                echo "-------------------------------"
+                ;;
+            4)
+                api_token=$(python3 $CLI_PATH get-apiserver-api-token)
+                echo "-------------------------------"
+                echo "$api_token"
+                echo "-------------------------------"
+                ;;
+            0)
+                break
+                ;;
+            *)
+                echo "Invalid option. Please try again."
+                ;;
+        esac
+    done
+}
+
 obfs_handler() {
     while true; do
         echo -e "${cyan}1.${NC} Remove Obfs"
@@ -1201,16 +1275,17 @@ display_advance_menu() {
     echo -e "${green}[6] ${NC}↝ SingBox SubLink(${red}Deprecated${NC})"
     echo -e "${green}[7] ${NC}↝ Normal-SUB SubLink"
     echo -e "${green}[8] ${NC}↝ Web Panel"
-    echo -e "${cyan}[9] ${NC}↝ Change Port Hysteria2"
-    echo -e "${cyan}[10] ${NC}↝ Change SNI Hysteria2"
-    echo -e "${cyan}[11] ${NC}↝ Manage OBFS"
-    echo -e "${cyan}[12] ${NC}↝ Change IPs(4-6)"
-    echo -e "${cyan}[13] ${NC}↝ Update geo Files"
-    echo -e "${cyan}[14] ${NC}↝ Manage Masquerade"
-    echo -e "${cyan}[15] ${NC}↝ Restart Hysteria2"
-    echo -e "${cyan}[16] ${NC}↝ Update Core Hysteria2"
-    echo -e "${cyan}[17] ${NC}↝ IP Limiter Menu"
-    echo -e "${red}[18] ${NC}↝ Uninstall Hysteria2"
+    echo -e "${green}[9] ${NC}↝ API Server"
+    echo -e "${cyan}[10] ${NC}↝ Change Port Hysteria2"
+    echo -e "${cyan}[11] ${NC}↝ Change SNI Hysteria2"
+    echo -e "${cyan}[12] ${NC}↝ Manage OBFS"
+    echo -e "${cyan}[13] ${NC}↝ Change IPs(4-6)"
+    echo -e "${cyan}[14] ${NC}↝ Update geo Files"
+    echo -e "${cyan}[15] ${NC}↝ Manage Masquerade"
+    echo -e "${cyan}[16] ${NC}↝ Restart Hysteria2"
+    echo -e "${cyan}[17] ${NC}↝ Update Core Hysteria2"
+    echo -e "${cyan}[18] ${NC}↝ IP Limiter Menu"
+    echo -e "${red}[19] ${NC}↝ Uninstall Hysteria2"
     echo -e "${red}[0] ${NC}↝ Back to Main Menu"
     echo -e "${LPurple}◇──────────────────────────────────────────────────────────────────────◇${NC}"
     echo -ne "${yellow}➜ Enter your option: ${NC}"
@@ -1231,16 +1306,17 @@ advance_menu() {
             6) singbox_handler ;;
             7) normalsub_handler ;;
             8) webpanel_handler ;;
-            9) hysteria2_change_port_handler ;;
-            10) hysteria2_change_sni_handler ;;
-            11) obfs_handler ;;
-            12) edit_ips ;;
-            13) geo_update_handler ;;
-            14) masquerade_handler ;;
-            15) python3 $CLI_PATH restart-hysteria2 ;;
-            16) python3 $CLI_PATH update-hysteria2 ;;
-            17) ip_limit_handler ;;
-            18) python3 $CLI_PATH uninstall-hysteria2 ;;
+            9) apiserver_handler ;;
+            10) hysteria2_change_port_handler ;;
+            11) hysteria2_change_sni_handler ;;
+            12) obfs_handler ;;
+            13) edit_ips ;;
+            14) geo_update_handler ;;
+            15) masquerade_handler ;;
+            16) python3 $CLI_PATH restart-hysteria2 ;;
+            17) python3 $CLI_PATH update-hysteria2 ;;
+            18) ip_limit_handler ;;
+            19) python3 $CLI_PATH uninstall-hysteria2 ;;
             0) return ;;
             *) echo "Invalid option. Please try again." ;;
         esac

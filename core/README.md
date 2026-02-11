@@ -34,6 +34,7 @@ This document provides a comprehensive guide to using the `cli.py` script, a com
     - [Singbox Service](#singbox-service)
     - [Normal Subscription Service](#normal-subscription-service)
     - [Web Panel Management](#web-panel-management)
+    - [API Server](#api-server)
     - [IP Limiter Service](#ip-limiter-service)
 - [Common Usage Examples](#common-usage-examples)
   - [Setting Up a New Server](#setting-up-a-new-server)
@@ -361,6 +362,45 @@ python3 cli.py setup-webpanel-decoy --domain panel.example.com --decoy-path /var
 
 # Stop decoy site
 python3 cli.py stop-webpanel-decoy
+```
+
+#### API Server
+```bash
+# Start API Server
+python3 cli.py apiserver \
+  --action start \
+  --domain api.example.com \
+  --port 8443
+
+# Start with custom API token and root path
+python3 cli.py apiserver \
+  --action start \
+  --domain api.example.com \
+  --port 8443 \
+  --token YOUR_API_TOKEN \
+  --root-path YOUR_ROOT_PATH
+
+# Stop API Server
+python3 cli.py apiserver --action stop
+
+# Get API Server URL
+python3 cli.py get-apiserver-url
+
+# Get API Server token
+python3 cli.py get-apiserver-api-token
+```
+
+API Server endpoints:
+```bash
+# List available methods
+curl -s -H "Authorization: YOUR_API_TOKEN" https://api.example.com:8443/YOUR_ROOT_PATH/methods
+
+# Call a method (example: add_user)
+curl -s -X POST \\
+  -H "Authorization: YOUR_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"method":"add_user","args":["john_doe",50,30,null,null,false,null],"kwargs":{}}' \\
+  https://api.example.com:8443/YOUR_ROOT_PATH/call
 ```
 
 #### IP Limiter Service

@@ -18,6 +18,7 @@ CONFIG_ENV_FILE = '/etc/hysteria/.configs.env'
 WEBPANEL_ENV_FILE = '/etc/hysteria/core/scripts/webpanel/.env'
 NORMALSUB_ENV_FILE = '/etc/hysteria/core/scripts/normalsub/.env'
 TELEGRAM_ENV_FILE = '/etc/hysteria/core/scripts/telegrambot/.env'
+APISERVER_ENV_FILE = '/etc/hysteria/core/scripts/apiserver/.env'
 NODES_JSON_PATH = "/etc/hysteria/nodes.json"
 
 
@@ -51,6 +52,7 @@ class Command(Enum):
     INSTALL_TELEGRAMBOT = os.path.join(SCRIPT_DIR, 'telegrambot', 'runbot.py')
     SHELL_SINGBOX = os.path.join(SCRIPT_DIR, 'singbox', 'singbox_shell.sh')
     SHELL_WEBPANEL = os.path.join(SCRIPT_DIR, 'webpanel', 'webpanel_shell.sh')
+    SHELL_APISERVER = os.path.join(SCRIPT_DIR, 'apiserver', 'apiserver_shell.sh')
     INSTALL_NORMALSUB = os.path.join(SCRIPT_DIR, 'normalsub', 'normalsub.sh')
     INSTALL_TCP_BRUTAL = os.path.join(SCRIPT_DIR, 'tcp-brutal', 'install.py')
     INSTALL_WARP = os.path.join(SCRIPT_DIR, 'warp', 'install.py')
@@ -834,6 +836,55 @@ def change_webpanel_domain_port(domain: str | None = None, port: int | None = No
         cmd_args.extend(['-p', str(port)])
     
     run_cmd(cmd_args)
+
+def start_apiserver(domain: str, port: int, api_token: str | None = None, root_path: str | None = None, debug: bool = False):
+    '''Starts API Server.'''
+    cmd_args = ['bash', Command.SHELL_APISERVER.value, 'start', '-d', domain, '-p', str(port)]
+    if api_token:
+        cmd_args.extend(['-t', api_token])
+    if root_path:
+        cmd_args.extend(['-r', root_path])
+    if debug:
+        cmd_args.append('-g')
+    run_cmd(cmd_args)
+
+def stop_apiserver():
+    '''Stops API Server.'''
+    run_cmd(['bash', Command.SHELL_APISERVER.value, 'stop'])
+
+def get_apiserver_url() -> str | None:
+    '''Gets the URL of API Server.'''
+    return run_cmd(['bash', Command.SHELL_APISERVER.value, 'url'])
+
+def get_apiserver_api_token() -> str | None:
+    '''Gets the API token of API Server.'''
+    return run_cmd(['bash', Command.SHELL_APISERVER.value, 'api-token'])
+
+def get_apiserver_env_config() -> dict[str, Any]:
+    '''Retrieves the current configuration for the API Server service from its .env file.'''
+    try:
+        if not os.path.exists(APISERVER_ENV_FILE):
+            return {}
+        env_vars = dotenv_values(APISERVER_ENV_FILE)
+        config: dict[str, Any] = {
+            'domain': env_vars.get('DOMAIN'),
+            'root_path': env_vars.get('ROOT_PATH'),
+            'api_token': env_vars.get('API_TOKEN'),
+            'debug': env_vars.get('DEBUG'),
+            'listen_address': env_vars.get('LISTEN_ADDRESS'),
+        }
+        port_val = env_vars.get('PORT')
+        if port_val and port_val.isdigit():
+            config['port'] = int(port_val)
+
+        listen_port_val = env_vars.get('LISTEN_PORT')
+        if listen_port_val and listen_port_val.isdigit():
+            config['listen_port'] = int(listen_port_val)
+
+        return config
+    except Exception as e:
+        print(f"Error reading API Server .env file: {e}")
+        return {}
 
 def get_services_status() -> dict[str, bool] | None:
     '''Gets the status of all project services.'''

@@ -12,6 +12,7 @@ SERVICES = [
     "hysteria-server.service",
     "hysteria-auth.service",
     "hysteria-webpanel.service",
+    "hysteria-apiserver.service",
     "hysteria-caddy.service",
     "hysteria-telegram-bot.service",
     "hysteria-normal-sub.service",

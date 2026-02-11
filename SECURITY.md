@@ -31,5 +31,5 @@ After receiving your report, we will:
 
 Thank you for helping keep Blitz Panel secure!
 
-[release]: https://github.com/ReturnFI/Blitz/releases
+[release]: https://github.com/TofaDev/Blitz/releases
 [emailing]: mailto:ReturnFI@proton.me

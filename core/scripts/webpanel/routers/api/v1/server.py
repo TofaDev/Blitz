@@ -141,7 +141,7 @@ async def server_services_status_api():
     Retrieve the status of various services.
 
     This endpoint provides information about the status of different services,
-    including Hysteria2, TelegramBot, Singbox, and Normal-SUB.
+    including Hysteria2, TelegramBot, API Server, Singbox, and Normal-SUB.
 
     Returns:
         ServerServicesStatusResponse: A response model containing service status details.
@@ -172,6 +172,8 @@ def __parse_services_status(services_status: dict[str, bool]) -> ServerServicesS
             parsed_services_status['hysteria_iplimit'] = status
         elif 'hysteria-webpanel' in service:
             parsed_services_status['hysteria_webpanel'] = status
+        elif 'hysteria-apiserver' in service:
+            parsed_services_status['hysteria_apiserver'] = status
         elif 'telegram-bot' in service:
             parsed_services_status['hysteria_telegram_bot'] = status
         elif 'hysteria-normal-sub' in service:

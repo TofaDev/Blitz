@@ -4,6 +4,7 @@ define_colors
 
 CADDY_CONFIG_FILE="/etc/hysteria/core/scripts/webpanel/Caddyfile"
 WEBPANEL_ENV_FILE="/etc/hysteria/core/scripts/webpanel/.env"
+APISERVER_ENV_FILE="/etc/hysteria/core/scripts/apiserver/.env"
 
 install_dependencies() {
     if command -v caddy &> /dev/null; then
@@ -68,68 +69,174 @@ EOL
 }
 
 update_caddy_file() {
-    source /etc/hysteria/core/scripts/webpanel/.env
-    
-    if [ -z "$DOMAIN" ] || [ -z "$ROOT_PATH" ] || [ -z "$PORT" ]; then
-        echo -e "${red}Error: One or more environment variables are missing.${NC}"
+    local webpanel_env_exists=false
+    local wp_domain=""
+    local wp_port=""
+    local wp_root_path=""
+    local decoy_path=""
+
+    if [ -f "$WEBPANEL_ENV_FILE" ]; then
+        webpanel_env_exists=true
+        source "$WEBPANEL_ENV_FILE"
+        wp_domain="$DOMAIN"
+        wp_port="$PORT"
+        wp_root_path="$ROOT_PATH"
+        decoy_path="${DECOY_PATH:-}"
+    fi
+
+    local api_root_path=""
+    local api_domain=""
+    local api_port=""
+    local api_listen_address="127.0.0.1"
+    local api_listen_port="28261"
+
+    if [ -f "$APISERVER_ENV_FILE" ]; then
+        api_root_path=$(grep -E '^ROOT_PATH=' "$APISERVER_ENV_FILE" | cut -d= -f2-)
+        api_domain=$(grep -E '^DOMAIN=' "$APISERVER_ENV_FILE" | cut -d= -f2-)
+        api_port=$(grep -E '^PORT=' "$APISERVER_ENV_FILE" | cut -d= -f2-)
+        api_listen_address=$(grep -E '^LISTEN_ADDRESS=' "$APISERVER_ENV_FILE" | cut -d= -f2-)
+        api_listen_port=$(grep -E '^LISTEN_PORT=' "$APISERVER_ENV_FILE" | cut -d= -f2-)
+
+        if [ -z "$api_listen_address" ]; then
+            api_listen_address="127.0.0.1"
+        fi
+        if [ -z "$api_listen_port" ]; then
+            api_listen_port="28261"
+        fi
+
+        if [ -z "$api_root_path" ] || [ -z "$api_domain" ] || [ -z "$api_port" ]; then
+            echo -e "${yellow}Warning: API Server env file is incomplete. Skipping API Server route.${NC}"
+            api_root_path=""
+        fi
+    fi
+
+    if [ "$webpanel_env_exists" = false ] && [ -z "$api_root_path" ]; then
+        echo -e "${red}Error: No WebPanel or API Server configuration found. Cannot generate Caddyfile.${NC}"
         return 1
     fi
 
-    if [ -n "$DECOY_PATH" ] && [ "$DECOY_PATH" != "None" ] && [ "$PORT" -eq 443 ]; then
-        cat <<EOL > "$CADDY_CONFIG_FILE"
-{
-    admin off
-    auto_https disable_redirects
-}
-
-$DOMAIN:$PORT {
-    route /$ROOT_PATH/* {
-
-        reverse_proxy http://127.0.0.1:28260
-    }
-    
-    @otherPaths {
-        not path /$ROOT_PATH/*
-    }
-    
-    handle @otherPaths {
-        root * $DECOY_PATH
-        file_server
-    }
-}
-EOL
-    else
-        cat <<EOL > "$CADDY_CONFIG_FILE"
+    cat <<EOL > "$CADDY_CONFIG_FILE"
 # Global configuration
 {
     admin off
     auto_https disable_redirects
 }
+EOL
 
-# Listen for incoming requests on the specified domain and port
-$DOMAIN:$PORT {
-    route /$ROOT_PATH/* {
+    if [ "$webpanel_env_exists" = true ]; then
+        if [ -z "$wp_domain" ] || [ -z "$wp_root_path" ] || [ -z "$wp_port" ]; then
+            echo -e "${red}Error: WebPanel environment variables are missing.${NC}"
+            return 1
+        fi
+
+        local include_api_in_webpanel=false
+        if [ -n "$api_root_path" ] && [ "$api_domain" = "$wp_domain" ] && [ "$api_port" = "$wp_port" ]; then
+            include_api_in_webpanel=true
+        fi
+
+        local webpanel_paths="/$wp_root_path/*"
+        if [ "$include_api_in_webpanel" = true ]; then
+            webpanel_paths="$webpanel_paths /$api_root_path/*"
+        fi
+
+        if [ -n "$decoy_path" ] && [ "$decoy_path" != "None" ] && [ "$wp_port" -eq 443 ]; then
+            cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+$wp_domain:$wp_port {
+    route /$wp_root_path/* {
         reverse_proxy http://127.0.0.1:28260
     }
-    
-    @blocked {
-        not path /$ROOT_PATH/*
+EOL
+            if [ "$include_api_in_webpanel" = true ]; then
+                cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+    route /$api_root_path/* {
+        reverse_proxy http://$api_listen_address:$api_listen_port
     }
-    
+EOL
+            fi
+
+            cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+    @otherPaths {
+        not path $webpanel_paths
+    }
+
+    handle @otherPaths {
+        root * $decoy_path
+        file_server
+    }
+}
+EOL
+        else
+            cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+$wp_domain:$wp_port {
+    route /$wp_root_path/* {
+        reverse_proxy http://127.0.0.1:28260
+    }
+EOL
+            if [ "$include_api_in_webpanel" = true ]; then
+                cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+    route /$api_root_path/* {
+        reverse_proxy http://$api_listen_address:$api_listen_port
+    }
+EOL
+            fi
+
+            cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+    @blocked {
+        not path $webpanel_paths
+    }
+
     abort @blocked
 }
 EOL
 
-        if [ -n "$DECOY_PATH" ] && [ "$DECOY_PATH" != "None" ] && [ "$PORT" -ne 443 ]; then
-            cat <<EOL >> "$CADDY_CONFIG_FILE"
+            if [ -n "$decoy_path" ] && [ "$decoy_path" != "None" ] && [ "$wp_port" -ne 443 ]; then
+                cat <<EOL >> "$CADDY_CONFIG_FILE"
 
 # Decoy site on port 443
-$DOMAIN:443 {
-    root * $DECOY_PATH
+$wp_domain:443 {
+    root * $decoy_path
     file_server
 }
 EOL
+            fi
         fi
+    fi
+
+    if [ -n "$api_root_path" ]; then
+        if [ "$webpanel_env_exists" = false ] || [ "$api_domain" != "$wp_domain" ] || [ "$api_port" != "$wp_port" ]; then
+            cat <<EOL >> "$CADDY_CONFIG_FILE"
+
+$api_domain:$api_port {
+    route /$api_root_path/* {
+        reverse_proxy http://$api_listen_address:$api_listen_port
+    }
+
+    @blocked {
+        not path /$api_root_path/*
+    }
+
+    abort @blocked
+}
+EOL
+        fi
+    fi
+}
+
+refresh_caddy() {
+    update_caddy_file || return 1
+
+    systemctl daemon-reload
+    systemctl enable hysteria-caddy.service > /dev/null 2>&1
+    systemctl restart hysteria-caddy.service
+    if [ $? -ne 0 ]; then
+        echo -e "${red}Error: Failed to restart Caddy.${NC}"
+        return 1
     fi
 }
 
@@ -588,8 +695,11 @@ case "$1" in
     api-token)
         show_webpanel_api_token
         ;;
+    refresh-caddy)
+        refresh_caddy
+        ;;
     *)
-        echo -e "${red}Usage: $0 {start|stop|decoy|stopdecoy|resetcreds|changeexp|changeroot|changedomain|url|api-token} [options]${NC}"
+        echo -e "${red}Usage: $0 {start|stop|decoy|stopdecoy|resetcreds|changeexp|changeroot|changedomain|url|api-token|refresh-caddy} [options]${NC}"
         echo -e "${yellow}start <DOMAIN> <PORT> [ADMIN_USERNAME] [ADMIN_PASSWORD] [EXPIRATION_MINUTES] [DEBUG] [DECOY_PATH]${NC}"
         echo -e "${yellow}stop${NC}"
         echo -e "${yellow}decoy <DOMAIN> <PATH_TO_DECOY_SITE>${NC}"
@@ -600,6 +710,7 @@ case "$1" in
         echo -e "${yellow}changedomain [-d new_domain] [-p new_port]${NC}"
         echo -e "${yellow}url${NC}"
         echo -e "${yellow}api-token${NC}"
+        echo -e "${yellow}refresh-caddy${NC}"
         exit 1
         ;;
 esac
