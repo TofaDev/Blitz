@@ -7,7 +7,8 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.encoders import jsonable_encoder
-from pydantic import BaseModel, Field
+from fastapi.openapi.utils import get_openapi
+from pydantic import BaseModel, Field, create_model
 
 from config import CONFIGS
 
@@ -46,6 +47,26 @@ class CallRequest(BaseModel):
 class CallResponse(BaseModel):
     ok: bool = True
     result: Any | None = None
+
+
+def _build_request_model(method_name: str, func: Any) -> type[BaseModel] | None:
+    fields: dict[str, tuple[Any, Any]] = {}
+    signature = inspect.signature(func)
+
+    for name, param in signature.parameters.items():
+        if name == 'self':
+            continue
+        if param.kind in (inspect.Parameter.VAR_POSITIONAL, inspect.Parameter.VAR_KEYWORD):
+            continue
+
+        annotation = param.annotation if param.annotation is not inspect._empty else Any
+        default = param.default if param.default is not inspect._empty else ...
+        fields[name] = (annotation, default)
+
+    if not fields:
+        return None
+
+    return create_model(f'{method_name.capitalize()}Request', **fields)
 
 
 def _extract_token(authorization: str | None, x_api_token: str | None) -> str | None:
@@ -91,6 +112,8 @@ def list_methods():
             'name': name,
             'signature': str(inspect.signature(func)),
             'doc': (func.__doc__ or '').strip() or None,
+            'http_method': 'POST',
+            'path': f'/call/{name}',
         })
     return {'methods': methods}
 
@@ -109,6 +132,72 @@ def call_method(body: CallRequest):
         raise HTTPException(status_code=500, detail=str(exc))
 
     return CallResponse(result=jsonable_encoder(result))
+
+
+def _call_with_kwargs(func: Any, kwargs: dict[str, Any]) -> CallResponse:
+    try:
+        result = func(**kwargs)
+    except TypeError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    return CallResponse(result=jsonable_encoder(result))
+
+
+def _register_method_routes():
+    for method_name, func in ALLOWED_METHODS.items():
+        request_model = _build_request_model(method_name, func)
+        description = (func.__doc__ or '').strip() or None
+
+        if request_model is None:
+            def endpoint(func=func):
+                return _call_with_kwargs(func, {})
+        else:
+            def endpoint(body: request_model, func=func):  # type: ignore[name-defined]
+                return _call_with_kwargs(func, body.model_dump())
+
+        endpoint.__name__ = f'call_{method_name}'
+        app.post(
+            f'/call/{method_name}',
+            response_model=CallResponse,
+            dependencies=[Depends(require_token)],
+            summary=f'Call {method_name}',
+            description=description,
+        )(endpoint)
+
+
+def _custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    security_schemes = openapi_schema.setdefault('components', {}).setdefault('securitySchemes', {})
+    security_schemes['ApiTokenAuth'] = {
+        'type': 'apiKey',
+        'in': 'header',
+        'name': 'Authorization',
+        'description': 'Set API token. You can use raw token or "Bearer <token>".',
+    }
+
+    for path, methods in openapi_schema.get('paths', {}).items():
+        if path == '/health':
+            continue
+        for operation in methods.values():
+            operation.setdefault('security', []).append({'ApiTokenAuth': []})
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+_register_method_routes()
+app.openapi = _custom_openapi  # type: ignore[assignment]
 
 
 if __name__ == '__main__':

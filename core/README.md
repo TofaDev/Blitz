@@ -392,15 +392,26 @@ python3 cli.py get-apiserver-api-token
 
 API Server endpoints:
 ```bash
+# Swagger / API docs
+https://api.example.com:8443/YOUR_ROOT_PATH/docs
+https://api.example.com:8443/YOUR_ROOT_PATH/redoc
+
 # List available methods
 curl -s -H "Authorization: YOUR_API_TOKEN" https://api.example.com:8443/YOUR_ROOT_PATH/methods
 
-# Call a method (example: add_user)
+# Call a method (generic)
 curl -s -X POST \\
   -H "Authorization: YOUR_API_TOKEN" \\
   -H "Content-Type: application/json" \\
   -d '{"method":"add_user","args":["john_doe",50,30,null,null,false,null],"kwargs":{}}' \\
   https://api.example.com:8443/YOUR_ROOT_PATH/call
+
+# Call a method (developer-friendly endpoint with named params)
+curl -s -X POST \\
+  -H "Authorization: YOUR_API_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{"username":"john_doe","traffic_limit":50,"expiration_days":30,"password":null,"creation_date":null,"unlimited":false,"note":null}' \\
+  https://api.example.com:8443/YOUR_ROOT_PATH/call/add_user
 ```
 
 #### IP Limiter Service

@@ -1,3 +1,13 @@
+# 🔖 ** release(2.5.4): API Server developer experience improvements 🚀 **
+
+*Released: 2026-02-11*
+
+## ✨ New Features
+
+* 🧭 **Per-method Endpoints**: Added `/call/<method>` endpoints with named params for better Swagger UX
+* 🔐 **Swagger Auth**: Added API token auth support directly in docs
+* 📚 **Docs**: Added Swagger/Redoc URLs and example calls for new endpoints
+
 # 🔖 ** release(2.5.2): API Server module, fork links update & docs refresh 🚀 **
 
 *Released: 2026-02-11*
