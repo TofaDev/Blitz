@@ -1,3 +1,11 @@
+# 🔖 ** release(2.5.5): Preserve API Server config during upgrade 🚀 **
+
+*Released: 2026-02-11*
+
+### 🛠️ Fixes
+
+* 💾 **Upgrade**: Preserve API Server `.env` during upgrade to prevent service start failures
+
 # 🔖 ** release(2.5.4): API Server developer experience improvements 🚀 **
 
 *Released: 2026-02-11*

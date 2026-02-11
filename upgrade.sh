@@ -239,6 +239,7 @@ FILES=(
     "$HYSTERIA_INSTALL_DIR/extra.json"
     "$HYSTERIA_INSTALL_DIR/geosite.dat"
     "$HYSTERIA_INSTALL_DIR/geoip.dat"
+    "$HYSTERIA_INSTALL_DIR/core/scripts/apiserver/.env"
     "$HYSTERIA_INSTALL_DIR/core/scripts/telegrambot/.env"
     "$HYSTERIA_INSTALL_DIR/core/scripts/normalsub/.env"
     "$HYSTERIA_INSTALL_DIR/core/scripts/normalsub/Caddyfile.normalsub"
